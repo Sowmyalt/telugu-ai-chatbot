@@ -2,16 +2,14 @@ import streamlit as st
 import google.generativeai as genai
 import speech_recognition as sr
 
-# Configure API
-genai.configure(api_key="AIzaSyCl7u_yvTBTljEKVzvhTMTFeU39iLUoXCM")
+# Configure API Key securely
+genai.configure(api_key=st.secrets["API_KEY"])
 
-# Page setup
+# Page config
 st.set_page_config(page_title="Telugu AI Chatbot", page_icon="🤖", layout="wide")
 
-# -------------------------------
-# CSS for Background & Blur
-# -------------------------------
-background_url = "https://media.istockphoto.com/photos/indian-farmer-women-on-farm-field-with-happy-face-picture-id907753228?k=6&m=907753228&s=170667a&w=0&h=jBDTI2l0CjqpQwitaL9SG1lIhDICiasm8BuoqbDNoBI="  # Change if you want
+# CSS for blurred background
+background_url = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e"  # Change if you want
 custom_css = f"""
 <style>
 [data-testid="stAppViewContainer"] {{
@@ -37,30 +35,26 @@ input[type="text"] {{
 """
 st.markdown(custom_css, unsafe_allow_html=True)
 
-# -------------------------------
-# HEADER
-# -------------------------------
+# Header
 st.markdown("<h1 style='text-align:center; color:white;'>🎙 Telugu AI Chatbot</h1>", unsafe_allow_html=True)
 st.write("<h4 style='text-align:center; color:white;'>Ask in Telugu or English by typing or speaking.</h4>", unsafe_allow_html=True)
 
-# -------------------------------
 # Session state
-# -------------------------------
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "user_input" not in st.session_state:
     st.session_state.user_input = ""
 
-# -------------------------------
-# Speech Recognition
-# -------------------------------
-def recognize_speech(language="te-IN"):
-    r = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.info("🎤 Speak now...")
-        audio = r.listen(source)
+# Speech Recognition (via Upload for Streamlit Cloud)
+uploaded_audio = st.file_uploader("🎵 Upload your audio file (Telugu speech):", type=["wav", "mp3"])
+
+if uploaded_audio is not None:
+    st.audio(uploaded_audio)
+    recognizer = sr.Recognizer()
+    with sr.AudioFile(uploaded_audio) as source:
+        audio = recognizer.record(source)
     try:
-        text = r.recognize_google(audio, language=language)
+        text = recognizer.recognize_google(audio, language="te-IN")
         st.success(f"✅ Recognized: {text}")
         st.session_state.user_input = text
     except sr.UnknownValueError:
@@ -68,19 +62,14 @@ def recognize_speech(language="te-IN"):
     except sr.RequestError:
         st.error("Speech Recognition API error")
 
-# -------------------------------
 # Input Section
-# -------------------------------
 col1, col2 = st.columns([3, 1])
 with col1:
     user_text = st.text_input("👉 Type your question here:", value=st.session_state.user_input, key="text_input")
 with col2:
-    if st.button("🎙 Speak (Telugu)"):
-        recognize_speech("te-IN")
+    st.markdown("<p style='color:white;'>Upload audio above ☝️</p>", unsafe_allow_html=True)
 
-# -------------------------------
 # Send Button
-# -------------------------------
 if st.button("Send"):
     if st.session_state.user_input.strip() or user_text.strip():
         final_input = user_text if user_text.strip() else st.session_state.user_input
@@ -94,11 +83,9 @@ if st.button("Send"):
             except Exception as e:
                 st.error(f"Error: {str(e)}")
     else:
-        st.warning("⚠️ Please type or speak your question.")
+        st.warning("⚠️ Please type or upload an audio question.")
 
-# -------------------------------
-# Chat History Display with Blur
-# -------------------------------
+# Chat History Display
 st.markdown("<div style='margin-top:20px;'>", unsafe_allow_html=True)
 for sender, msg in st.session_state.chat_history:
     st.markdown(f"<div class='chat-container'><strong>{sender}:</strong> {msg}</div>", unsafe_allow_html=True)
